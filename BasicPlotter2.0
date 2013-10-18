@@ -1,0 +1,418 @@
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.util.HashMap;
+import java.util.Scanner;
+import java.util.Stack;
+
+import javax.swing.JFrame;
+
+class ETNode {
+	int tag;// tag = 0->binary operator
+	// tag = 1->variable
+	// tag = 2->constant
+	// tag = 4->unary operator
+	char operator;
+	char var;
+	double operand;
+	ETNode left, right;
+
+	ETNode() {
+
+	}
+};
+
+public class BasicPlotter extends JFrame implements Runnable, KeyListener {
+
+	private static final long serialVersionUID = 1L;
+	char c;
+
+	double p_X = (float) 0, p_Y = (float) 600.0, X_increment;
+
+	private static ETNode ETree;
+	private static Stack<ETNode> operatorStack, treeStack;
+
+	private static ETNode postfixString[];
+	private static int postfixSize = 0, O_X = 400, O_Y = 400,
+			num_of_divisions = 20, left_boundary = -400, right_boundary = 400,
+			left_index = (-1 * num_of_divisions / 2),
+			right_index = (num_of_divisions / 2),
+			upper_index = (num_of_divisions / 2), lower_index = (-1
+					* num_of_divisions / 2);
+	double lastNum, scale = 1.0, max_num = 20.0, division;
+
+	HashMap<Character, Boolean> operator;
+	HashMap<Character, Integer> priority;
+
+	double n_X, n_Y, magni = 10.0;
+	public static String expression;
+	Thread t;
+	static BasicPlotter b;
+
+	private Scanner scan;
+
+	public static void main(String args[]) {
+		b = new BasicPlotter();
+	}
+
+	BasicPlotter() {
+		operator = new HashMap<Character, Boolean>();
+		priority = new HashMap<Character, Integer>();
+		operatorStack = new Stack<ETNode>();
+		treeStack = new Stack<ETNode>();
+		operator.put('^', true);
+		operator.put('-', true);
+		operator.put('+', true);
+		operator.put('*', true);
+		operator.put('/', true);
+		priority.put('-', 1);
+		priority.put('+', 1);
+		priority.put('*', 2);
+		priority.put('/', 3);
+		priority.put('^', 4);
+		operator.put('s', true);
+		priority.put('s', 5);
+		operator.put('c', true);
+		priority.put('c', 5);
+		operator.put('t', true);
+		priority.put('t', 5);
+		operator.put('?', true);
+		priority.put('?', -1);
+		operator.put('(', true);
+		priority.put('(', -1);
+		operator.put(')', true);
+		priority.put(')', -1);
+		System.out.println(Math.E);
+		scan = new Scanner(System.in);
+		System.out.println("Enter the Expression in terms of variable x");
+		expression = scan.nextLine();
+
+		postfixString = new ETNode[expression.length()];
+		ConvertToPostfix(expression);
+		System.out.println("length: " + expression.length());
+		while (priority.get(operatorStack.peek().operator) != -1) {
+			postfixString[postfixSize++] = operatorStack.pop();
+		}
+		System.out.println("The infix expression is:");
+		for (int i = 0; i < postfixSize; i++) {
+			if (postfixString[i].tag == 0 || postfixString[i].tag == 4)
+				System.out.print(postfixString[i].operator + " ");
+			else if (postfixString[i].tag == 1)
+				System.out.print(postfixString[i].var + " ");
+			else if (postfixString[i].tag == 2)
+				System.out.print(postfixString[i].operand + " ");
+		}
+		constructExpressionTree();
+		ETree = treeStack.pop();
+		setSize(800, 800);
+		addKeyListener(this);
+		setFocusable(true);
+		setVisible(true);
+		t = new Thread(this);
+		t.start();
+		repaint();
+	}
+
+	private void constructExpressionTree() {
+		for (int i = 0; i < postfixSize; i++) {
+			if (postfixString[i].tag == 1 || postfixString[i].tag == 2) {
+				treeStack.push(postfixString[i]);
+			} else if (postfixString[i].tag == 4) {
+				ETNode l;
+				l = treeStack.pop();
+				postfixString[i].left = l;
+				postfixString[i].right = null;// unary operators have only the
+												// left child..
+				treeStack.push(postfixString[i]);
+			} else {
+				ETNode l, r;
+				r = treeStack.pop();
+				l = treeStack.pop();
+				postfixString[i].left = l;
+				postfixString[i].right = r;
+				treeStack.push(postfixString[i]);
+			}
+		}
+	}
+
+	private void ConvertToPostfix(String expression) {
+		int i = 0;
+		char cur;
+		ETNode p = new ETNode();
+		p.tag = 0;
+		p.operator = '?';
+		operatorStack.push(p);
+		while (i < expression.length()) {
+			cur = expression.charAt(i);
+			if (Character.isLetterOrDigit(cur)) {// current char is not an
+													// operator
+				if (cur == 'x') {
+					ETNode t = new ETNode();
+					t.tag = 1;
+					t.var = cur;
+					t.left = null;
+					t.right = null;
+					postfixString[postfixSize++] = t;
+				} else if (cur == 'e') {
+					ETNode t = new ETNode();
+					t.tag = 2;
+					t.operand = Math.E;
+					t.left = null;
+					t.right = null;
+					postfixString[postfixSize++] = t;
+				} else if (cur == 's') {// its a sine operator
+					i += 2;
+					ETNode t = new ETNode();
+					t.tag = 4;
+					t.operator = 's';
+					t.left = null;
+					t.right = null;
+					operatorStack.push(t);
+				} else if (cur == 'c') {// its a sine operator
+					i += 2;
+					ETNode t = new ETNode();
+					t.tag = 4;
+					t.operator = 'c';
+					t.left = null;
+					t.right = null;
+					operatorStack.push(t);
+				} else if (cur == 't') {// its a sine operator
+					i += 2;
+					ETNode t = new ETNode();
+					t.tag = 4;
+					t.operator = 't';
+					t.left = null;
+					t.right = null;
+					operatorStack.push(t);
+				} else {// its a digit
+
+					i = extractNumber(expression, i);// advance to the next
+														// position after the
+														// number constant
+					ETNode t = new ETNode();
+					t.tag = 2;
+					t.operand = lastNum;
+					t.left = null;
+					t.right = null;
+					postfixString[postfixSize++] = t;
+				}
+
+			}
+
+			else {
+
+				if (cur == '(') {
+					ETNode t = new ETNode();
+					t.tag = 0;
+					t.operator = cur;
+					t.left = null;
+					t.right = null;
+					operatorStack.push(t);
+				}
+
+				else if (cur == ')') {
+					while ((operatorStack.peek().operator) != '(') {
+						System.out.println("popping "
+								+ operatorStack.peek().operator);
+						postfixString[postfixSize++] = operatorStack.pop();
+					}
+					operatorStack.pop();// pops the remaining '('
+				}
+
+				else {// its an operand
+					while (priority.get(operatorStack.peek().operator) > priority
+							.get(cur)) {
+						postfixString[postfixSize++] = operatorStack.pop();
+					}
+					ETNode t = new ETNode();
+					t.tag = 0;
+					t.operator = cur;
+					t.left = null;
+					t.right = null;
+					operatorStack.push(t);
+				}
+			}
+			i++;
+		}
+	}
+
+	private int extractNumber(String expression2, int i) {
+		lastNum = 0.0;
+		char c = '@';
+		while (i < expression.length()) {
+			c = expression.charAt(i);
+			if (Character.isDigit(c)) {
+				lastNum = (lastNum * 10) + (c - '0');
+				i++;
+			} else
+				break;
+		}
+		double decimal = 0.0;
+		if (c == '.') {
+			decimal = 0.0;
+			int pow = 1;
+			i++;
+			while (i < expression.length()) {
+				c = expression.charAt(i);
+				if (Character.isDigit(c)) {
+					decimal += ((double) (c - '0')) / Math.pow(10, pow);
+					pow++;
+					i++;
+				} else
+					break;
+			}
+		}
+		lastNum += decimal;
+		return i - 1;
+	}
+
+	public void paint(Graphics g) {
+		super.paint(g);// clears the screen
+
+		// g.drawLine(10, 0, O_X, O_Y);
+		// g.drawLine(10, 600, O_X, O_Y);
+		division = 800 / num_of_divisions;
+		for (int i = left_index, j = (-1 * num_of_divisions / 2); i <= right_index; i++, j++) {
+			int index = (int) (j * division);
+			g.setColor(Color.CYAN);
+			g.drawLine((int) ((float) (index)) + 400, 0,
+					(int) ((float) (index)) + 400, 800);
+			g.setColor(Color.BLACK);
+			g.drawLine((int) ((float) (index)) + 400, O_Y - 5,
+					(int) ((float) (index)) + 400, O_Y + 5);
+			g.setColor(Color.GREEN);
+			g.drawString(Integer.toString((int) (i * scale)), index + 400,
+					O_Y + 12);
+
+		}
+		for (int i = lower_index, j = (-1 * num_of_divisions / 2); i <= upper_index; i++, j++) {
+			int index = (int) (j * division);
+			g.setColor(Color.CYAN);
+			g.drawLine(0, 400 - (int) ((float) (index)), 800,
+					400 - (int) ((float) (index)));
+			g.setColor(Color.BLACK);
+			g.drawLine(O_X - 5, 400 - (int) ((float) (index)), O_X + 5,
+					400 - (int) ((float) (index)));
+			g.setColor(Color.GREEN);
+			g.drawString(Integer.toString((int) (i * scale)), O_X + 12,
+					400 - index);
+
+		}
+		// DRAWING THE AXES..
+		g.setColor(Color.BLACK);
+		g.drawLine(0, O_Y, 800, O_Y);
+		g.drawLine(O_X, 0, O_X, 800);
+		g.setColor(Color.RED);
+		double i = 0;
+		//System.out.println("calculating from " + left_index + "to"
+		//		+ right_index);
+		p_X = left_index;// * division;
+		while (p_X <= right_index) {// * division) {
+			n_X = p_X + 0.01;
+			n_Y = evaluateExpression(ETree, n_X);
+			// n_Y = magni * Math.pow(n_X,n_X);
+			g.drawLine((int) ((p_X * division) + O_X),
+					(O_Y - (int) (p_Y * division)),
+					((int) (n_X * division) + O_X),
+					(O_Y - (int) (n_Y * division)));
+			p_X = n_X;
+			p_Y = n_Y;
+		}
+	}
+
+	private double evaluateExpression(ETNode root, double x) {
+		if (root.tag == 0) {
+			if (root.operator == '^') {
+				return (Math.pow(evaluateExpression(root.left, x),
+						evaluateExpression(root.right, x)));
+			}
+			if (root.operator == '+') {
+				return (evaluateExpression(root.left, x) + evaluateExpression(
+						root.right, x));
+			}
+			if (root.operator == '-') {
+				return (evaluateExpression(root.left, x) - evaluateExpression(
+						root.right, x));
+			}
+			if (root.operator == '*') {
+				return (evaluateExpression(root.left, x) * evaluateExpression(
+						root.right, x));
+			}
+			if (root.operator == '/') {
+				return (evaluateExpression(root.left, x) / evaluateExpression(
+						root.right, x));
+			}
+		} else if (root.tag == 1) {
+			return (double) (x);
+		} else if (root.tag == 4) {
+			if (root.operator == 's') {
+				return (Math.sin(evaluateExpression(root.left, x)));
+			} else if (root.operator == 'c') {
+				return (Math.cos(evaluateExpression(root.left, x)));
+			} else if (root.operator == 't') {
+				return (Math.tan(evaluateExpression(root.left, x)));
+			}
+		} else {
+			return (double) (root.operand);
+		}
+		return 0;
+	}
+
+	@Override
+	public void run() {
+		// while (true) {
+		//
+		// repaint();
+		// try {
+		// Thread.sleep(5);
+		// } catch (InterruptedException e) {
+		// //
+		// e.printStackTrace();
+		// }
+		// }
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// System.out.println("fuck yea");
+		// TODO Auto-generated method stub
+		if (e.getKeyCode() == KeyEvent.VK_UP) {
+			lower_index += 1;
+			upper_index += 1;
+			O_Y += division;
+			repaint();
+		} else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+			lower_index -= 1;
+			upper_index -= 1;
+			O_Y -= division;
+			repaint();
+		} else if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+//			left_boundary -= division;
+//			right_boundary -= division;
+			left_index -= 1;
+			right_index -= 1;
+			O_X += division;
+			repaint();
+		} else if (e.getKeyCode() == KeyEvent.VK_RIGHT) {
+//			left_boundary += division;
+//			right_boundary += division;
+			left_index += 1;
+			right_index += 1;
+			O_X -= division;
+			repaint();
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void keyTyped(KeyEvent arg0) {
+		// TODO Auto-generated method stub
+
+	}
+
+}
