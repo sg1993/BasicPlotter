@@ -22,7 +22,7 @@ class ETNode {
 	}
 };
 
-public class BasicPlotter extends JFrame implements Runnable, KeyListener {
+public class PlotIt extends JFrame implements Runnable, KeyListener {
 
 	private static final long serialVersionUID = 1L;
 	char c;
@@ -47,15 +47,18 @@ public class BasicPlotter extends JFrame implements Runnable, KeyListener {
 	double n_X, n_Y, magni = 10.0;
 	public static String expression;
 	Thread t;
-	static BasicPlotter b;
+	static PlotIt b;
 
 	private Scanner scan;
 
 	public static void main(String args[]) {
-		b = new BasicPlotter();
+		b = new PlotIt();
+		
 	}
 
-	BasicPlotter() {
+	PlotIt() {
+		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		this.setFocusable(true);
 		operator = new HashMap<Character, Boolean>();
 		priority = new HashMap<Character, Integer>();
 		operatorStack = new Stack<ETNode>();
@@ -280,8 +283,8 @@ public class BasicPlotter extends JFrame implements Runnable, KeyListener {
 			g.setColor(Color.BLACK);
 			g.drawLine((int) ((float) (index)) + 400, O_Y - 5,
 					(int) ((float) (index)) + 400, O_Y + 5);
-			g.setColor(Color.GREEN);
-			g.drawString(Integer.toString((int) (i * scale)), index + 400,
+			g.setColor(Color.MAGENTA);
+			g.drawString(Float.toString((float) (i * scale)), index + 400,
 					O_Y + 12);
 
 		}
@@ -293,8 +296,8 @@ public class BasicPlotter extends JFrame implements Runnable, KeyListener {
 			g.setColor(Color.BLACK);
 			g.drawLine(O_X - 5, 400 - (int) ((float) (index)), O_X + 5,
 					400 - (int) ((float) (index)));
-			g.setColor(Color.GREEN);
-			g.drawString(Integer.toString((int) (i * scale)), O_X + 12,
+			g.setColor(Color.MAGENTA);
+			g.drawString(Float.toString((float) (i * scale)), O_X + 12,
 					400 - index);
 
 		}
@@ -306,15 +309,16 @@ public class BasicPlotter extends JFrame implements Runnable, KeyListener {
 		double i = 0;
 		//System.out.println("calculating from " + left_index + "to"
 		//		+ right_index);
-		p_X = left_index;// * division;
-		while (p_X <= right_index) {// * division) {
-			n_X = p_X + 0.01;
+		p_X = (left_index-2)*scale;//left-most x-coordinate..
+		while (p_X <= (right_index+2)*scale)  {//upto right-most x-coordinate..
+			n_X = p_X + .1;
 			n_Y = evaluateExpression(ETree, n_X);
 			// n_Y = magni * Math.pow(n_X,n_X);
-			g.drawLine((int) ((p_X * division) + O_X),
-					(O_Y - (int) (p_Y * division)),
-					((int) (n_X * division) + O_X),
-					(O_Y - (int) (n_Y * division)));
+			g.drawLine((int) ((p_X/scale * division) + O_X),
+					(O_Y - (int) (p_Y/scale * division)),
+					((int) (n_X/scale * division) + O_X),
+					(O_Y - (int) (n_Y/scale * division)));
+			//System.out.println("point: " + n_X + " " + n_Y + "->" + " " +((p_X * division) + O_X) + " " + (O_Y - (p_Y * division)) );
 			p_X = n_X;
 			p_Y = n_Y;
 		}
@@ -399,6 +403,22 @@ public class BasicPlotter extends JFrame implements Runnable, KeyListener {
 			left_index += 1;
 			right_index += 1;
 			O_X -= division;
+			repaint();
+		}
+		else if(e.getKeyCode() == KeyEvent.VK_PAGE_UP){
+			//System.out.println("asf");
+			scale -= 0.25;
+			if(scale <= 0.25){
+				scale += 0.25;
+				scale -= 0.1;
+			}
+			if(scale <= 0){
+				scale = 0.05;
+			}
+			repaint();
+		}
+		else if(e.getKeyCode() == KeyEvent.VK_PAGE_DOWN){
+			scale += 0.1;
 			repaint();
 		}
 	}
